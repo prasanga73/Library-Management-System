@@ -110,40 +110,85 @@ def add_user():
 
 # Function to Issue a Book
 def add_issue():
+    def search_book():
+        book_no = entry_book_no.get()
+        if not book_no:
+            messagebox.showinfo("Information", "Please enter a book number.")
+            return
+            
+        cursor.execute("SELECT book_name FROM books WHERE book_no = %s", (book_no,))
+        book_name_result = cursor.fetchone()
+        
+        if not book_name_result:
+            messagebox.showinfo("Information", "No book found with the provided book number.")
+            return
+            
+        book_name_var.set(book_name_result[0])
+        
+        cursor.execute("SELECT author_id FROM books WHERE book_no = %s", (book_no,))
+        author_id = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT author_name FROM authors WHERE author_id = %s", (author_id,))
+        author_result = cursor.fetchone()
+        
+        if author_result:
+            book_author_var.set(author_result[0])
+            submit_btn['state'] = 'normal'
+        else:
+            book_author_var.set("Unknown Author")
+            messagebox.showinfo("Warning", "Author information not found, but you can proceed.")
+            submit_btn['state'] = 'normal'
+    
     def submit():
-        book_no, book_name, book_author, student_id, status, issue_date = entry_book_no.get(), entry_book_name.get(), entry_book_author.get(), entry_student_id.get(), 1, entry_issue_date.get()
+        book_no = entry_book_no.get()
+        book_name = book_name_var.get()
+        book_author = book_author_var.get()
+        student_id = entry_student_id.get()
+        status = 1
+        issue_date = entry_issue_date.get()
+        
         if book_no and book_name and book_author and student_id and issue_date:
             cursor.execute("INSERT INTO issued_books (book_no, book_name, book_author, student_id, status, issue_date) VALUES (%s, %s, %s, %s, %s, %s)",
                            (book_no, book_name, book_author, student_id, status, issue_date))
             db_connection.commit()
             messagebox.showinfo("Success", "Book issued successfully!")
             issue_win.destroy()
+        else:
+            messagebox.showinfo("Information", "Please fill all fields.")
 
     issue_win = Toplevel(root)
     issue_win.title("Issue Book")
     issue_win.geometry("400x500")
 
+    # Book Number
     Label(issue_win, text="Enter Book Number:").pack(pady=5)
     entry_book_no = Entry(issue_win)
     entry_book_no.pack(pady=5)
-
-    Label(issue_win, text="Enter Book Name:").pack(pady=5)
-    entry_book_name = Entry(issue_win)
-    entry_book_name.pack(pady=5)
-
-    Label(issue_win, text="Enter Book Author:").pack(pady=5)
-    entry_book_author = Entry(issue_win)
-    entry_book_author.pack(pady=5)
-
+    Button(issue_win, text="Search Book", command=search_book).pack(pady=5)
+    
+    # Book Name (display only)
+    Label(issue_win, text="Book Name:").pack(pady=5)
+    book_name_var = StringVar()
+    Label(issue_win, textvariable=book_name_var, bg="white", width=30).pack(pady=5)
+    
+    # Book Author (display only)
+    Label(issue_win, text="Book Author:").pack(pady=5)
+    book_author_var = StringVar()
+    Label(issue_win, textvariable=book_author_var, bg="white", width=30).pack(pady=5)
+    
+    # Student ID
     Label(issue_win, text="Enter Student ID:").pack(pady=5)
     entry_student_id = Entry(issue_win)
     entry_student_id.pack(pady=5)
 
+    # Issue Date
     Label(issue_win, text="Enter Issue Date (YYYY-MM-DD):").pack(pady=5)
     entry_issue_date = Entry(issue_win)
     entry_issue_date.pack(pady=5)
 
-    Button(issue_win, text="Submit", command=submit).pack(pady=10)
+    # Submit button (disabled until book is found)
+    submit_btn = Button(issue_win, text="Submit", command=submit, state='disabled')
+    submit_btn.pack(pady=10)
 
 # Function to Delete Information
 def delete_information():
@@ -153,9 +198,18 @@ def delete_information():
         
         if selected and value:
             if selected == "User":
+                cursor.execute("SELECT * FROM users WHERE name = %s", (value,))
+                student_id = cursor.fetchone()
+                if student_id:
+                    student_id = student_id[0]
+                else:
+                    student_id = None
                 cursor.execute("DELETE FROM users WHERE name = %s", (value,))
+                cursor.execute("DELETE FROM issued_books WHERE student_id = %s", (student_id,))
             elif selected == "Book":
                 cursor.execute("DELETE FROM books WHERE book_no = %s", (value,))
+                cursor.execute("DELETE FROM issued_books WHERE book_no = %s", (value,))
+
             elif selected == "Author":
                 cursor.execute("DELETE FROM authors WHERE name = %s", (value,))
                 
@@ -178,7 +232,7 @@ def delete_information():
     combo.pack(pady=5)
 
     # Label that changes based on selection
-    field_label = Label(delete_win, text="Enter User Name:")
+    field_label = Label(delete_win, text="Enter Student Id:")
     field_label.pack(pady=5)
     
     entry = Entry(delete_win, width=30)
@@ -188,7 +242,7 @@ def delete_information():
     def update_field_label(event):
         selected = combo.get()
         if selected == "User":
-            field_label.config(text="Enter User Name:")
+            field_label.config(text="Enter Student Id:")
         elif selected == "Book":
             field_label.config(text="Enter Book Number:")
         elif selected == "Author":
