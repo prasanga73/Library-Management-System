@@ -198,7 +198,7 @@ def delete_information():
         
         if selected and value:
             if selected == "User":
-                cursor.execute("SELECT * FROM users WHERE name = %s", (value,))
+                cursor.execute("SELECT id FROM users WHERE name = %s", (value,))
                 student_id = cursor.fetchone()
                 if student_id:
                     student_id = student_id[0]
@@ -232,7 +232,7 @@ def delete_information():
     combo.pack(pady=5)
 
     # Label that changes based on selection
-    field_label = Label(delete_win, text="Enter Student Id:")
+    field_label = Label(delete_win, text="Enter Student Name:")
     field_label.pack(pady=5)
     
     entry = Entry(delete_win, width=30)
@@ -330,5 +330,71 @@ Button(button_frame, text="Add Book", width=20, command=add_book).grid(row=1, co
 
 # Third row - Exit button (centered)
 Button(button_frame, text="Exit", width=20, command=root.quit, bg="#b71c1c", fg="white").grid(row=2, column=1, pady=30)
+# Function to Query Backup Tables
+def query_backup():
+    def fetch_and_display():
+        backup_table_map = {
+            "Authors Backup": "authors_backup",
+            "Books Backup": "books_backup",
+            "Users Backup": "users_backup",
+            "Issued Books Backup": "issued_books_backup"
+        }
+        
+        selected_backup = backup_table_map[combo.get()]
+        
+        # Check if the backup table exists
+        try:
+            cursor.execute(f"SHOW TABLES LIKE '{selected_backup}'")
+            if not cursor.fetchone():
+                messagebox.showinfo("Information", f"Backup table '{selected_backup}' does not exist.")
+                return
+                
+            cursor.execute(f"SELECT * FROM {selected_backup}")
+            results = cursor.fetchall()
+            
+            # Get column names
+            cursor.execute(f"SHOW COLUMNS FROM {selected_backup}")
+            columns = [column[0] for column in cursor.fetchall()]
+            
+            # Configure columns in treeview
+            tree["columns"] = columns
+            
+            # Clear old data
+            for row in tree.get_children():
+                tree.delete(row)
+            
+            # Set headers
+            for col in columns:
+                tree.heading(col, text=col.replace('_', ' ').title())
+                tree.column(col, width=100)
+            
+            # Insert data
+            for row in results:
+                tree.insert("", END, values=row)
+                
+        except mysql.connector.Error as err:
+            messagebox.showerror("Database Error", f"Error accessing backup table: {err}")
 
+    backup_win = Toplevel(root)
+    backup_win.title("Query Backup Tables")
+    backup_win.geometry("700x400")
+
+    Label(backup_win, text="Select Backup Table:", font=("Arial", 14)).pack(pady=5)
+    combo = ttk.Combobox(backup_win, values=["Authors Backup", "Books Backup", "Users Backup", "Issued Books Backup"], state="readonly")
+    combo.current(0)
+    combo.pack(pady=5)
+
+    Button(backup_win, text="Fetch Backup Data", command=fetch_and_display).pack(pady=5)
+
+    # Create treeview
+    tree = ttk.Treeview(backup_win, show="headings")
+    tree.pack(expand=True, fill=BOTH, padx=10, pady=10)
+    
+    # Add scrollbar
+    scrollbar = ttk.Scrollbar(tree, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    scrollbar.pack(side=RIGHT, fill=Y)
+
+# Add backup query button
+Button(button_frame, text="Query Backups", width=20, command=query_backup).grid(row=2, column=0, padx=15, pady=15)
 root.mainloop()
