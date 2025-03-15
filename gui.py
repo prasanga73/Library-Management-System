@@ -264,7 +264,7 @@ def add_author():
     def submit():
         name= entry_name.get()
         if name:
-            cursor.execute("INSERT INTO authors (name) VALUES (%s)", 
+            cursor.execute("INSERT INTO authors (author_name) VALUES (%s)", 
                           (name,))
             db_connection.commit()
             messagebox.showinfo("Success", "Author added successfully!")
