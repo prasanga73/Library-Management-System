@@ -22,10 +22,10 @@ INSERT INTO `admins` (`id`, `name`, `email`, `password`, `mobile`) VALUES
 (1, 'admin', 'admin@gmail.com', 'admin@1234', 1148458757);
 
 
-
 CREATE TABLE IF NOT EXISTS `authors` (
   `author_id` int(11) NOT NULL,
-  `author_name` varchar(250) NOT NULL
+  `author_name` varchar(250) NOT NULL,
+  PRIMARY KEY (`author_id`)
 ) ENGINE=InnoDB;
 
 
@@ -38,6 +38,7 @@ INSERT INTO `authors` (`author_id`, `author_name`) VALUES
 
 
 
+
 CREATE TABLE IF NOT EXISTS `books` (
   `book_id` int(11) NOT NULL,
   `book_name` varchar(250) NOT NULL,
@@ -45,7 +46,8 @@ CREATE TABLE IF NOT EXISTS `books` (
   `cat_id` int(11) NOT NULL,
   `book_no` int(11) NOT NULL,
   `book_price` int(11) NOT NULL,
-  PRIMARY KEY (`book_id`)
+  PRIMARY KEY (`book_id`),
+  FOREIGN KEY (`author_id`) REFERENCES `authors`(`author_id`)
 ) ENGINE=InnoDB;
 
 
@@ -53,6 +55,7 @@ CREATE TABLE IF NOT EXISTS `books` (
 INSERT INTO `books` (`book_id`,`book_name`, `author_id`, `cat_id`, `book_no`, `book_price`) VALUES
 ( 1,'Pride and Prejudice', 104, 1, 4518, 270),
 ( 2,'Picture of Dorian Gray', 105, 2, 6541, 300);
+
 
 
 
@@ -103,14 +106,8 @@ INSERT INTO `issued_books` (`s_no`, `book_id`, `student_id`, `status`, `issue_da
 (18, 2, 7, 1, '2020-04-22');
 
 
-
-
-
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `authors`
-  ADD PRIMARY KEY (`author_id`);
 
 
 ALTER TABLE `category`
@@ -123,10 +120,6 @@ ALTER TABLE `issued_books`
 
 ALTER TABLE `admins`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
-
-ALTER TABLE `authors`
-  MODIFY `author_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
 
 
 ALTER TABLE `category`
