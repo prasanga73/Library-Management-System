@@ -3,14 +3,16 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET AUTOCOMMIT = 0;
 START TRANSACTION;
 SET time_zone = "+00:00";
-
-CREATE TABLE `admins` (
+CREATE DATABASE IF NOT EXISTS lms;
+USE lms;
+CREATE TABLE IF NOT EXISTS `admins` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(250) NOT NULL,
   `mobile` int(10) NOT NULL
-) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 
 INSERT INTO `admins` (`id`, `name`, `email`, `password`, `mobile`) VALUES
@@ -18,10 +20,10 @@ INSERT INTO `admins` (`id`, `name`, `email`, `password`, `mobile`) VALUES
 
 
 
-CREATE TABLE `authors` (
+CREATE TABLE IF NOT EXISTS `authors` (
   `author_id` int(11) NOT NULL,
   `author_name` varchar(250) NOT NULL
-) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 
@@ -33,14 +35,14 @@ INSERT INTO `authors` (`author_id`, `author_name`) VALUES
 
 
 
-CREATE TABLE `books` (
+CREATE TABLE IF NOT EXISTS `books` (
   `book_id` int(11) NOT NULL,
   `book_name` varchar(250) NOT NULL,
   `author_id` int(11) NOT NULL,
   `cat_id` int(11) NOT NULL,
   `book_no` int(11) NOT NULL,
   `book_price` int(11) NOT NULL
-)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 
@@ -51,10 +53,10 @@ INSERT INTO `books` (`book_id`, `book_name`, `author_id`, `cat_id`, `book_no`, `
 
 
 
-CREATE TABLE `category` (
+CREATE TABLE IF NOT EXISTS `category` (
   `cat_id` int(11) NOT NULL,
   `cat_name` varchar(100) NOT NULL
-)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 
@@ -67,7 +69,7 @@ INSERT INTO `category` (`cat_id`, `cat_name`) VALUES
 
 
 
-CREATE TABLE `issued_books` (
+CREATE TABLE IF NOT EXISTS `issued_books` (
   `s_no` int(11) NOT NULL,
   `book_no` int(11) NOT NULL,
   `book_name` varchar(200) NOT NULL,
@@ -75,7 +77,7 @@ CREATE TABLE `issued_books` (
   `student_id` int(11) NOT NULL,
   `status` int(11) NOT NULL,
   `issue_date` longtext NOT NULL
-) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 
@@ -85,14 +87,14 @@ INSERT INTO `issued_books` (`s_no`, `book_no`, `book_name`, `book_author`, `stud
 
 
 
-CREATE TABLE `users` (
+CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL,
   `name` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(100) NOT NULL,
   `mobile` int(10) NOT NULL,
   `address` varchar(250) NOT NULL
-) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 
@@ -151,5 +153,110 @@ ALTER TABLE `issued_books`
 
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
-COMMIT;
 
+CREATE TABLE admins_backup LIKE admins;
+ALTER TABLE admins_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+CREATE TABLE authors_backup LIKE authors;
+ALTER TABLE authors_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+CREATE TABLE books_backup LIKE books;
+ALTER TABLE books_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+CREATE TABLE category_backup LIKE category;
+ALTER TABLE category_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+CREATE TABLE issued_books_backup LIKE issued_books;
+ALTER TABLE issued_books_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+CREATE TABLE users_backup LIKE users;
+ALTER TABLE users_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+DELIMITER //
+CREATE TRIGGER before_admin_delete
+BEFORE DELETE ON admins
+FOR EACH ROW
+BEGIN
+    INSERT INTO admins_backup SELECT *, NOW() FROM admins WHERE id = OLD.id;
+END;
+//
+DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER before_author_delete
+BEFORE DELETE ON authors
+FOR EACH ROW
+BEGIN
+    INSERT INTO authors_backup SELECT *, NOW() FROM authors WHERE author_id = OLD.author_id;
+END;
+//
+DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER before_book_delete
+BEFORE DELETE ON books
+FOR EACH ROW
+BEGIN
+    INSERT INTO books_backup SELECT *, NOW() FROM books WHERE book_id = OLD.book_id;
+END;
+//
+DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER before_category_delete
+BEFORE DELETE ON category
+FOR EACH ROW
+BEGIN
+    INSERT INTO category_backup SELECT *, NOW() FROM category WHERE cat_id = OLD.cat_id;
+END;
+//
+DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER before_issued_book_delete
+BEFORE DELETE ON issued_books
+FOR EACH ROW
+BEGIN
+    INSERT INTO issued_books_backup SELECT *, NOW() FROM issued_books WHERE s_no = OLD.s_no;
+END;
+//
+DELIMITER ;
+
+
+DELIMITER //
+CREATE TRIGGER before_user_delete
+BEFORE DELETE ON users
+FOR EACH ROW
+BEGIN
+    INSERT INTO users_backup SELECT *, NOW() FROM users WHERE id = OLD.id;
+END;
+//
+DELIMITER ;
+
+DELIMITER //
+
+-- Trigger whihc deletes issued books when a book is deleted
+CREATE TRIGGER delete_issued_books_on_book_delete
+BEFORE DELETE ON books
+FOR EACH ROW
+BEGIN
+    DELETE FROM issued_books WHERE book_no = OLD.book_no;
+END;
+//
+
+-- Trigger to delete issued books when a user is deleted
+CREATE TRIGGER delete_issued_books_on_user_delete
+BEFORE DELETE ON users
+FOR EACH ROW
+BEGIN
+    DELETE FROM issued_books WHERE student_id = OLD.id;
+END;
+//
+
+DELIMITER ;
+
+COMMIT;
