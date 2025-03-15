@@ -348,7 +348,7 @@ def delete_information():
     combo.pack(pady=5)
 
     # Label that changes based on selection
-    field_label = Label(delete_win, text="Enter Student Name:")
+    field_label = Label(delete_win, text="Enter Student Id:")
     field_label.pack(pady=5)
     
     entry = Entry(delete_win, width=30)
