@@ -395,7 +395,7 @@ def add_book():
 
     book_win = Toplevel(root)
     book_win.title("Add Book")
-    book_win.geometry("500x450")
+    book_win.geometry("500x500")
     
     Label(book_win, text="Enter Book Id:").pack(pady=5)
     entry_bookid = Entry(book_win)

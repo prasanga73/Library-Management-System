@@ -224,7 +224,7 @@ CREATE TRIGGER delete_issued_books_on_book_delete
 BEFORE DELETE ON books
 FOR EACH ROW
 BEGIN
-    DELETE FROM issued_books WHERE book_no = OLD.book_no;
+    DELETE FROM issued_books WHERE book_id = OLD.book_id;
 END;
 //
 
@@ -235,6 +235,19 @@ FOR EACH ROW
 BEGIN
     DELETE FROM issued_books WHERE student_id = OLD.id;
 END;
+//
+
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER delete_books_on_author_delete
+BEFORE DELETE ON authors
+FOR EACH ROW
+BEGIN
+    DELETE FROM books WHERE author_id = OLD.author_id;
+END;
+
 //
 
 DELIMITER ;
