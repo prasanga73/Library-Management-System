@@ -1,17 +1,20 @@
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET AUTOCOMMIT = 0;
-START TRANSACTION;
 SET time_zone = "+00:00";
+START TRANSACTION;
 CREATE DATABASE IF NOT EXISTS lms;
 USE lms;
+COMMIT;
+
+START TRANSACTION;
 CREATE TABLE IF NOT EXISTS `admins` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(250) NOT NULL,
   `mobile` int(10) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+)ENGINE=InnoDB;
 
 
 
@@ -23,7 +26,7 @@ INSERT INTO `admins` (`id`, `name`, `email`, `password`, `mobile`) VALUES
 CREATE TABLE IF NOT EXISTS `authors` (
   `author_id` int(11) NOT NULL,
   `author_name` varchar(250) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB;
 
 
 
@@ -41,14 +44,15 @@ CREATE TABLE IF NOT EXISTS `books` (
   `author_id` int(11) NOT NULL,
   `cat_id` int(11) NOT NULL,
   `book_no` int(11) NOT NULL,
-  `book_price` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `book_price` int(11) NOT NULL,
+  PRIMARY KEY (`book_id`)
+) ENGINE=InnoDB;
 
 
 
-INSERT INTO `books` (`book_id`, `book_name`, `author_id`, `cat_id`, `book_no`, `book_price`) VALUES
-(1, 'Pride and Prejudice', 104, 1, 4518, 270),
-(2, 'Picture of Dorian Gray', 105, 2, 6541, 300);
+INSERT INTO `books` (`book_id`,`book_name`, `author_id`, `cat_id`, `book_no`, `book_price`) VALUES
+( 1,'Pride and Prejudice', 104, 1, 4518, 270),
+( 2,'Picture of Dorian Gray', 105, 2, 6541, 300);
 
 
 
@@ -56,7 +60,7 @@ INSERT INTO `books` (`book_id`, `book_name`, `author_id`, `cat_id`, `book_no`, `
 CREATE TABLE IF NOT EXISTS `category` (
   `cat_id` int(11) NOT NULL,
   `cat_name` varchar(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB; 
 
 
 
@@ -66,56 +70,47 @@ INSERT INTO `category` (`cat_id`, `cat_name`) VALUES
 (4, 'Motivational'),
 (5, 'Story');
 
-
-
-
-CREATE TABLE IF NOT EXISTS `issued_books` (
-  `s_no` int(11) NOT NULL,
-  `book_no` int(11) NOT NULL,
-  `book_name` varchar(200) NOT NULL,
-  `book_author` varchar(200) NOT NULL,
-  `student_id` int(11) NOT NULL,
-  `status` int(11) NOT NULL,
-  `issue_date` longtext NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-
-
-INSERT INTO `issued_books` (`s_no`, `book_no`, `book_name`, `book_author`, `student_id`, `status`, `issue_date`) VALUES
-(1, 6541, 'Pride and Prejudice', 'Jane Austen', 7, 1, '2025-03-12'),
-(18, 7845, 'half Girlfriend', 'Chetan Bhagat', 2, 1, '2020-04-22');
-
-
-
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL,
   `name` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(100) NOT NULL,
-  `mobile` int(10) NOT NULL,
-  `address` varchar(250) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `mobile` int(25) NOT NULL,
+  `address` varchar(250) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
 
 
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `mobile`, `address`) VALUES
 (4, 'user', 'user@gmail.com', 'user@1234', 9847483644, 'Dharan'),
-(7, 'hemant', 'prasanga@gmail.com', 'prasanga', 9847483644, 'Itahari');
+(7, 'prasanga', 'prasanga@gmail.com', 'prasanga', 9847483644, 'Itahari');
+
+
+
+CREATE TABLE IF NOT EXISTS `issued_books` (
+  `s_no` int(11) NOT NULL,
+  `book_id` int(11) NOT NULL, 
+  `student_id` int(11) NOT NULL,
+  `status` int(11) NOT NULL,
+  `issue_date` longtext NOT NULL,
+  FOREIGN KEY (`book_id`) REFERENCES `books`(`book_id`),  
+  FOREIGN KEY (`student_id`) REFERENCES `users`(`id`)
+)ENGINE=InnoDB;
+
+INSERT INTO `issued_books` (`s_no`, `book_id`, `student_id`, `status`, `issue_date`) VALUES
+(1, 1, 7, 1, '2025-03-12'),
+(18, 2, 7, 1, '2020-04-22');
+
+
 
 
 
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`id`);
 
-
-
 ALTER TABLE `authors`
   ADD PRIMARY KEY (`author_id`);
-
-
-ALTER TABLE `books`
-  ADD PRIMARY KEY (`book_id`);
-
 
 
 ALTER TABLE `category`
@@ -126,21 +121,12 @@ ALTER TABLE `issued_books`
   ADD PRIMARY KEY (`s_no`);
 
 
-ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`);
-
-
-
 ALTER TABLE `admins`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 
 ALTER TABLE `authors`
   MODIFY `author_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
-
-
-ALTER TABLE `books`
-  MODIFY `book_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 
 ALTER TABLE `category`
@@ -150,9 +136,9 @@ ALTER TABLE `category`
 ALTER TABLE `issued_books`
   MODIFY `s_no` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
+COMMIT;
 
-ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+START TRANSACTION;
 
 CREATE TABLE admins_backup LIKE admins;
 ALTER TABLE admins_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
@@ -171,6 +157,7 @@ ALTER TABLE issued_books_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_
 
 CREATE TABLE users_backup LIKE users;
 ALTER TABLE users_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+COMMIT;
 
 DELIMITER //
 CREATE TRIGGER before_admin_delete
@@ -258,5 +245,3 @@ END;
 //
 
 DELIMITER ;
-
-COMMIT;
