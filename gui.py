@@ -2,6 +2,7 @@ import mysql.connector
 import ttkbootstrap as tb
 from tkinter import *
 from tkinter import ttk, messagebox
+import datetime
 
 # Database Connection
 db_connection = mysql.connector.connect(
@@ -50,6 +51,109 @@ def query_information():
         # Insert new data
         for row in results:
             tree.insert("", END, values=row)
+        
+        # Enable buttons after data is loaded
+        delete_btn.config(state=NORMAL)
+        edit_btn.config(state=NORMAL)
+    
+    def delete_record():
+        selected_item = tree.selection()
+        if not selected_item:
+            messagebox.showinfo("Information", "Please select a record to delete")
+            return
+        
+        if not messagebox.askyesno("Confirm", "Are you sure you want to delete this record?"):
+            return
+            
+        # Get the table name
+        table_map = {
+            "Authors": "authors",
+            "Books": "books",
+            "Users": "users",
+            "Issued Books": "issued_books"
+        }
+        selected_table = table_map[combo.get()]
+        
+        # Get primary key column (first column) and value
+        columns = tree.cget("columns")
+        primary_key_col = columns[0]
+        values = tree.item(selected_item, 'values')
+        primary_key_val = values[0]
+        
+        try:
+            cursor.execute(f"DELETE FROM {selected_table} WHERE {primary_key_col} = %s", (primary_key_val,))
+            db_connection.commit()
+            messagebox.showinfo("Success", "Record deleted successfully")
+            fetch_and_display()  # Refresh the view
+        except mysql.connector.Error as err:
+            messagebox.showerror("Error", f"Failed to delete record: {err}")
+    
+    def edit_record():
+        selected_item = tree.selection()
+        if not selected_item:
+            messagebox.showinfo("Information", "Please select a record to edit")
+            return
+            
+        # Get selected record data
+        values = tree.item(selected_item, 'values')
+        
+        # Get column names
+        columns = tree.cget("columns")
+        
+        # Get table name
+        table_map = {
+            "Authors": "authors",
+            "Books": "books",
+            "Users": "users",
+            "Issued Books": "issued_books"
+        }
+        selected_table = table_map[combo.get()]
+        
+        # Create edit window
+        edit_win = Toplevel(query_win)
+        edit_win.title(f"Edit {combo.get()} Record")
+        edit_win.geometry("500x500")
+        
+        # Create entry widgets for each column
+        entries = {}
+        for i, col in enumerate(columns):
+            Label(edit_win, text=f"{col.replace('_', ' ').title()}:").grid(row=i, column=0, padx=10, pady=5, sticky=W)
+            entry = Entry(edit_win, width=30)
+            entry.grid(row=i, column=1, padx=10, pady=5)
+            entry.insert(0, values[i] if values[i] is not None else "")
+            entries[col] = entry
+        
+        def save_changes():
+            try:
+                # Get primary key column (usually the first column)
+                primary_key_col = columns[0]
+                primary_key_val = values[0]
+                
+                # Build UPDATE query
+                set_clause = ", ".join([f"{col} = %s" for col in columns])
+                update_values = [entries[col].get() for col in columns]
+                
+                # Add WHERE clause value
+                where_clause = f"{primary_key_col} = %s"
+                update_values.append(primary_key_val)
+                
+                # Execute update
+                cursor.execute(
+                    f"UPDATE {selected_table} SET {set_clause} WHERE {where_clause}", 
+                    update_values
+                )
+                db_connection.commit()
+                messagebox.showinfo("Success", "Record updated successfully")
+                edit_win.destroy()
+                fetch_and_display()  # Refresh the view
+                
+            except mysql.connector.Error as err:
+                messagebox.showerror("Error", f"Failed to update record: {err}")
+        
+        # Save button
+        Button(edit_win, text="Save Changes", command=save_changes).grid(
+            row=len(columns)+1, column=0, columnspan=2, pady=15
+        )
 
     query_win = Toplevel(root)
     query_win.title("Query Information")
@@ -60,7 +164,15 @@ def query_information():
     combo.current(0)  # Set default selection
     combo.pack(pady=5)
 
-    Button(query_win, text="Fetch Data", command=fetch_and_display).pack(pady=5)
+    # Button frame
+    btn_frame = Frame(query_win)
+    btn_frame.pack(pady=5)
+    
+    Button(btn_frame, text="Fetch Data", command=fetch_and_display).grid(row=0, column=0, padx=10)
+    delete_btn = Button(btn_frame, text="Delete Selected", command=delete_record, state=DISABLED)
+    delete_btn.grid(row=0, column=1, padx=10)
+    edit_btn = Button(btn_frame, text="Edit Selected", command=edit_record, state=DISABLED)
+    edit_btn.grid(row=0, column=2, padx=10)
 
     # Create treeview with dynamic columns
     tree = ttk.Treeview(query_win, show="headings")
@@ -146,6 +258,19 @@ def add_issue():
         student_id = entry_student_id.get()
         status = 1
         issue_date = entry_issue_date.get()
+        # Validate student ID exists
+        cursor.execute("SELECT id FROM users WHERE id = %s", (student_id,))
+        student_exists = cursor.fetchone()
+        if not student_exists:
+            messagebox.showerror("Error", "Student ID does not exist in the database.")
+            return
+
+        # Validate date format
+        try:
+            datetime.datetime.strptime(issue_date, '%Y-%m-%d')
+        except ValueError:
+            messagebox.showerror("Error", "Invalid date format. Please use YYYY-MM-DD format.")
+            return
         
         if book_no and book_name and book_author and student_id and issue_date:
             cursor.execute("INSERT INTO issued_books (book_no, book_name, book_author, student_id, status, issue_date) VALUES (%s, %s, %s, %s, %s, %s)",
@@ -205,6 +330,7 @@ def delete_information():
                 else:
                     student_id = None
                 cursor.execute("DELETE FROM users WHERE name = %s", (value,))
+                rows_affected = cursor.rowcount
                 cursor.execute("DELETE FROM issued_books WHERE student_id = %s", (student_id,))
             elif selected == "Book":
                 cursor.execute("DELETE FROM books WHERE book_no = %s", (value,))
@@ -212,7 +338,8 @@ def delete_information():
                 cursor.execute("DELETE FROM issued_books WHERE book_no = %s", (value,))
 
             elif selected == "Author":
-                cursor.execute("DELETE FROM authors WHERE name = %s", (value,))
+                cursor.execute("DELETE FROM authors WHERE author_name = %s", (value,))
+                rows_affected = cursor.rowcount
                 
             
             db_connection.commit()
@@ -333,6 +460,7 @@ Button(button_frame, text="Add Book", width=20, command=add_book).grid(row=1, co
 Button(button_frame, text="Exit", width=20, command=root.quit, bg="#b71c1c", fg="white").grid(row=2, column=1, pady=30)
 # Function to Query Backup Tables
 def query_backup():
+    
     def fetch_and_display():
         backup_table_map = {
             "Authors Backup": "authors_backup",
@@ -372,20 +500,118 @@ def query_backup():
             # Insert data
             for row in results:
                 tree.insert("", END, values=row)
+            
+            # Enable buttons after data is loaded
+            clear_btn.config(state=NORMAL)
+            edit_btn.config(state=NORMAL)
                 
         except mysql.connector.Error as err:
             messagebox.showerror("Database Error", f"Error accessing backup table: {err}")
+    
+    def clear_all():
+        backup_table_map = {
+            "Authors Backup": "authors_backup",
+            "Books Backup": "books_backup",
+            "Users Backup": "users_backup",
+            "Issued Books Backup": "issued_books_backup"
+        }
+        
+        selected_backup = backup_table_map[combo.get()]
+        
+        if messagebox.askyesno("Confirm", f"Are you sure you want to clear all records from {selected_backup}?"):
+            try:
+                cursor.execute(f"DELETE FROM {selected_backup}")
+                db_connection.commit()
+                messagebox.showinfo("Success", f"All records deleted from {selected_backup}")
+                fetch_and_display()  # Refresh the display
+            except mysql.connector.Error as err:
+                messagebox.showerror("Error", f"Failed to clear table: {err}")
+    
+    def edit_record():
+        selected_item = tree.selection()
+        if not selected_item:
+            messagebox.showinfo("Information", "Please select a record to edit")
+            return
+        
+        # Get selected record data
+        values = tree.item(selected_item, 'values')
+        
+        # Get column names
+        columns = tree.cget("columns")
+        
+        # Get table name
+        backup_table_map = {
+            "Authors Backup": "authors_backup",
+            "Books Backup": "books_backup",
+            "Users Backup": "users_backup",
+            "Issued Books Backup": "issued_books_backup"
+        }
+        selected_backup = backup_table_map[combo.get()]
+        
+        # Create edit window
+        edit_win = Toplevel(backup_win)
+        edit_win.title(f"Edit {combo.get()} Record")
+        edit_win.geometry("500x500")
+        
+        # Create entry widgets for each column
+        entries = {}
+        for i, col in enumerate(columns):
+            Label(edit_win, text=f"{col.replace('_', ' ').title()}:").grid(row=i, column=0, padx=10, pady=5, sticky=W)
+            entry = Entry(edit_win, width=30)
+            entry.grid(row=i, column=1, padx=10, pady=5)
+            entry.insert(0, values[i] if values[i] is not None else "")
+            entries[col] = entry
+        
+        def save_changes():
+            try:
+                # Get primary key column (usually the first column)
+                primary_key_col = columns[0]
+                primary_key_val = values[0]
+                
+                # Build UPDATE query
+                set_clause = ", ".join([f"{col} = %s" for col in columns])
+                update_values = [entries[col].get() for col in columns]
+                
+                # Add WHERE clause value
+                where_clause = f"{primary_key_col} = %s"
+                update_values.append(primary_key_val)
+                
+                # Execute update
+                cursor.execute(
+                    f"UPDATE {selected_backup} SET {set_clause} WHERE {where_clause}", 
+                    update_values
+                )
+                db_connection.commit()
+                messagebox.showinfo("Success", "Record updated successfully")
+                edit_win.destroy()
+                fetch_and_display()  # Refresh the view
+                
+            except mysql.connector.Error as err:
+                messagebox.showerror("Error", f"Failed to update record: {err}")
+        
+        # Save button
+        Button(edit_win, text="Save Changes", command=save_changes).grid(
+            row=len(columns)+1, column=0, columnspan=2, pady=15
+        )
 
     backup_win = Toplevel(root)
     backup_win.title("Query Backup Tables")
-    backup_win.geometry("700x400")
+    backup_win.geometry("800x500")
 
     Label(backup_win, text="Select Backup Table:", font=("Arial", 14)).pack(pady=5)
     combo = ttk.Combobox(backup_win, values=["Authors Backup", "Books Backup", "Users Backup", "Issued Books Backup"], state="readonly")
     combo.current(0)
     combo.pack(pady=5)
 
-    Button(backup_win, text="Fetch Backup Data", command=fetch_and_display).pack(pady=5)
+    # Button frame
+    btn_frame = Frame(backup_win)
+    btn_frame.pack(pady=5)
+    
+    Button(btn_frame, text="Fetch Backup Data", command=fetch_and_display).grid(row=0, column=0, padx=10)
+    clear_btn = Button(btn_frame, text="Clear All Records", command=clear_all, state=DISABLED)
+    clear_btn.grid(row=0, column=1, padx=10)
+    edit_btn = Button(btn_frame, text="Edit Selected Record", command=edit_record, state=DISABLED)
+    edit_btn.grid(row=0, column=2, padx=10)
 
     # Create treeview
     tree = ttk.Treeview(backup_win, show="headings")

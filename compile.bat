@@ -1,0 +1,1 @@
+python -m nuitka --standalone --follow-imports --enable-plugin=tk-inter --windows-console-mode=disable --output-dir=out gui.py
