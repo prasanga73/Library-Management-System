@@ -208,12 +208,13 @@ def delete_information():
                 cursor.execute("DELETE FROM issued_books WHERE student_id = %s", (student_id,))
             elif selected == "Book":
                 cursor.execute("DELETE FROM books WHERE book_no = %s", (value,))
+                rows_affected = cursor.rowcount
                 cursor.execute("DELETE FROM issued_books WHERE book_no = %s", (value,))
 
             elif selected == "Author":
                 cursor.execute("DELETE FROM authors WHERE name = %s", (value,))
                 
-            rows_affected = cursor.rowcount
+            
             db_connection.commit()
             
             if rows_affected > 0:
