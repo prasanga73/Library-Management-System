@@ -1,26 +1,10 @@
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET AUTOCOMMIT = 0;
-SET time_zone = "+00:00";
 START TRANSACTION;
 CREATE DATABASE IF NOT EXISTS lms;
 USE lms;
 COMMIT;
 
 START TRANSACTION;
-CREATE TABLE IF NOT EXISTS `admins` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `password` varchar(250) NOT NULL,
-  `mobile` int(10) NOT NULL
-)ENGINE=InnoDB;
-
-
-
-INSERT INTO `admins` (`id`, `name`, `email`, `password`, `mobile`) VALUES
-(1, 'admin', 'admin@gmail.com', 'admin@1234', 1148458757);
-
 
 CREATE TABLE IF NOT EXISTS `authors` (
   `author_id` int(11) NOT NULL,
@@ -106,9 +90,6 @@ INSERT INTO `issued_books` (`s_no`, `book_id`, `student_id`, `status`, `issue_da
 (18, 2, 7, 1, '2020-04-22');
 
 
-ALTER TABLE `admins`
-  ADD PRIMARY KEY (`id`);
-
 
 ALTER TABLE `category`
   ADD PRIMARY KEY (`cat_id`);
@@ -116,10 +97,6 @@ ALTER TABLE `category`
 
 ALTER TABLE `issued_books`
   ADD PRIMARY KEY (`s_no`);
-
-
-ALTER TABLE `admins`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 
 ALTER TABLE `category`
@@ -132,9 +109,6 @@ ALTER TABLE `issued_books`
 COMMIT;
 
 START TRANSACTION;
-
-CREATE TABLE admins_backup LIKE admins;
-ALTER TABLE admins_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 CREATE TABLE authors_backup LIKE authors;
 ALTER TABLE authors_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
@@ -151,16 +125,6 @@ ALTER TABLE issued_books_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_
 CREATE TABLE users_backup LIKE users;
 ALTER TABLE users_backup ADD COLUMN deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 COMMIT;
-
-DELIMITER //
-CREATE TRIGGER before_admin_delete
-BEFORE DELETE ON admins
-FOR EACH ROW
-BEGIN
-    INSERT INTO admins_backup SELECT *, NOW() FROM admins WHERE id = OLD.id;
-END;
-//
-DELIMITER ;
 
 
 DELIMITER //
